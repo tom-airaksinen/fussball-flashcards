@@ -48,12 +48,21 @@ const lessons = [
   { id: 4, name: "4 – Match & resultat",     cards: [3, 26, 27, 28, 32, 33, 34, 35, 36, 38, 39] },
 ];
 
+// Uppdatera ordantalet i lektionsraderna
+lessons.forEach(lesson => {
+  const row = document.querySelector(`.lesson-row[data-lesson="${lesson.id}"]`);
+  if (row) {
+    const label = row.querySelector(".lesson-label");
+    label.textContent = `${lesson.name} (${lesson.cards.length})`;
+  }
+});
+
 let activePool = vocab;
 
 function getSelectedLessonIds() {
-  return [...document.querySelectorAll(".lesson-btn[data-lesson]")]
-    .filter(b => b.dataset.lesson !== "all" && b.classList.contains("active"))
-    .map(b => Number(b.dataset.lesson));
+  return [...document.querySelectorAll(".lesson-row[data-lesson]")]
+    .filter(r => r.dataset.lesson !== "all" && r.classList.contains("active"))
+    .map(r => Number(r.dataset.lesson));
 }
 
 function buildPool(selectedLessonIds) {
@@ -63,6 +72,7 @@ function buildPool(selectedLessonIds) {
 }
 
 const lessonScreen = document.getElementById("lesson-screen");
+const wordListScreen = document.getElementById("word-list-screen");
 const gameEls = [
   document.querySelector("header"),
   document.getElementById("scoreboard"),
@@ -72,6 +82,7 @@ const gameEls = [
 
 function showLessonScreen() {
   lessonScreen.style.display = "flex";
+  wordListScreen.style.display = "none";
   gameEls.forEach(el => el.style.display = "none");
 }
 
@@ -80,24 +91,51 @@ function startSession() {
   currentCard = null;
   minute = 1; goals = 0; misses = 0;
   lessonScreen.style.display = "none";
+  wordListScreen.style.display = "none";
   gameEls.forEach(el => el.style.display = "");
   updateScoreboard();
   loadCard();
 }
 
-document.querySelectorAll(".lesson-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    if (btn.dataset.lesson === "all") {
-      const allActive = [...document.querySelectorAll(".lesson-btn")].every(b => b.classList.contains("active"));
-      document.querySelectorAll(".lesson-btn").forEach(b => b.classList.toggle("active", !allActive));
+function syncAllRow() {
+  const individual = [...document.querySelectorAll(".lesson-row[data-lesson]:not([data-lesson='all'])")];
+  document.querySelector(".lesson-row[data-lesson='all']").classList.toggle("active", individual.every(r => r.classList.contains("active")));
+}
+
+// Toggle-logik: klick på check-rutan eller raden (ej view-knappen)
+document.querySelectorAll(".lesson-row").forEach(row => {
+  row.addEventListener("click", e => {
+    if (e.target.classList.contains("lesson-view")) return; // hanteras separat
+    const lessonId = row.dataset.lesson;
+    if (lessonId === "all") {
+      const allActive = [...document.querySelectorAll(".lesson-row")].every(r => r.classList.contains("active"));
+      document.querySelectorAll(".lesson-row").forEach(r => r.classList.toggle("active", !allActive));
     } else {
-      btn.classList.toggle("active");
-      const individual = [...document.querySelectorAll(".lesson-btn[data-lesson]:not([data-lesson='all'])")];
-      document.querySelector("[data-lesson='all']").classList.toggle("active", individual.every(b => b.classList.contains("active")));
+      row.classList.toggle("active");
+      syncAllRow();
     }
   });
 });
 
+// Ordlistevy
+document.querySelectorAll(".lesson-view").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const lessonId = Number(btn.dataset.lesson);
+    const lesson = lessons.find(l => l.id === lessonId);
+    const words = vocab.filter(v => lesson.cards.includes(v.id));
+
+    document.getElementById("word-list-title").textContent = `${lesson.name} (${words.length} ord)`;
+    document.getElementById("word-list-body").innerHTML = words
+      .map(v => `<div class="word-row"><span class="word-sv">${v.sv}</span><span class="word-de">${v.de}</span></div>`)
+      .join("");
+
+    lessonScreen.style.display = "none";
+    wordListScreen.style.display = "flex";
+  });
+});
+
+document.getElementById("word-list-back").addEventListener("click", showLessonScreen);
 document.getElementById("start-btn").addEventListener("click", startSession);
 document.getElementById("change-lesson-btn").addEventListener("click", showLessonScreen);
 
