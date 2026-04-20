@@ -79,3 +79,82 @@ footer {
   font-size: 0.9rem;
   opacity: 0.7;
 }
+
+/* --- Lektionsväljare --- */
+
+#lesson-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+#lesson-screen h1 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.lesson-subtitle {
+  opacity: 0.7;
+  margin: 0;
+}
+
+.lesson-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.lesson-btn {
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  border: 2px solid #444;
+  background: #2a2a2a;
+  color: #aaa;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.lesson-btn.active {
+  background: #2d4a2d;
+  color: white;
+  border-color: #5a9a5a;
+}
+
+.lesson-btn[data-lesson="all"] {
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+
+#start-btn {
+  padding: 1rem 2rem;
+  border-radius: 14px;
+  border: none;
+  background: #5a9a5a;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+#change-lesson-btn {
+  display: block;
+  margin-top: 0.4rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}

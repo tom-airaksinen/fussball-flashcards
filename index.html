@@ -13,6 +13,19 @@
 </head>
 <body>
 
+  <div id="lesson-screen">
+    <h1>⚽ Fußball</h1>
+    <p class="lesson-subtitle">Välj lektion(er) att öva</p>
+    <div class="lesson-buttons">
+      <button class="lesson-btn active" data-lesson="all">Alla lektioner</button>
+      <button class="lesson-btn active" data-lesson="1">1 – Grundläggande</button>
+      <button class="lesson-btn active" data-lesson="2">2 – Regler & situationer</button>
+      <button class="lesson-btn active" data-lesson="3">3 – Spelet</button>
+      <button class="lesson-btn active" data-lesson="4">4 – Match & resultat</button>
+    </div>
+    <button id="start-btn">Starta session</button>
+  </div>
+
   <header>
     <h1>⚽ Fußball</h1>
     <select id="mode">
@@ -38,6 +51,7 @@
 
   <footer>
     <p>👈 kan inte &nbsp;&nbsp; 👉 kan</p>
+    <button id="change-lesson-btn">Byt lektion</button>
   </footer>
 
   <script src="data/vocab.js"></script>

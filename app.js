@@ -10,16 +10,16 @@ const STORAGE_KEY = "fussball-progress";
 
 let progress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
-vocab.forEach(card => {
-  if (!progress[card.id]) {
-    progress[card.id] = { strength: 0 };
+vocab.forEach(v => {
+  if (!progress[v.id]) {
+    progress[v.id] = { strength: 0 };
   }
-  card.strength = progress[card.id].strength;
+  v.strength = progress[v.id].strength;
 });
 
 function saveProgress() {
-  vocab.forEach(card => {
-    progress[card.id].strength = card.strength;
+  vocab.forEach(v => {
+    progress[v.id].strength = v.strength;
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
@@ -36,17 +36,77 @@ function updateScoreboard() {
   scoreEl.textContent = `${goals}–${misses}`;
 }
 
-function goal() {
-  goals++;
+function goal() { goals++; }
+function miss() { misses++; }
+
+// --- Lektionssystem ---
+
+const lessons = [
+  { id: 1, name: "1 – Grundläggande",       cards: [1, 9, 10, 11, 12, 13, 14, 15, 16, 17, 37] },
+  { id: 2, name: "2 – Regler & situationer", cards: [2, 4, 5, 8, 18, 22, 23, 24, 25, 29, 30, 31] },
+  { id: 3, name: "3 – Spelet",               cards: [6, 7, 19, 20, 21, 40, 41, 42] },
+  { id: 4, name: "4 – Match & resultat",     cards: [3, 26, 27, 28, 32, 33, 34, 35, 36, 38, 39] },
+];
+
+let activePool = vocab;
+
+function getSelectedLessonIds() {
+  return [...document.querySelectorAll(".lesson-btn[data-lesson]")]
+    .filter(b => b.dataset.lesson !== "all" && b.classList.contains("active"))
+    .map(b => Number(b.dataset.lesson));
 }
 
-function miss() {
-  misses++;
+function buildPool(selectedLessonIds) {
+  if (selectedLessonIds.length === 0) return vocab;
+  const cardIds = new Set(selectedLessonIds.flatMap(lid => lessons.find(l => l.id === lid).cards));
+  return vocab.filter(v => cardIds.has(v.id));
 }
 
-// Fix 2: Filtrera bort nuvarande kort för att undvika upprepning
+const lessonScreen = document.getElementById("lesson-screen");
+const gameEls = [
+  document.querySelector("header"),
+  document.getElementById("scoreboard"),
+  document.querySelector("main"),
+  document.querySelector("footer"),
+];
+
+function showLessonScreen() {
+  lessonScreen.style.display = "flex";
+  gameEls.forEach(el => el.style.display = "none");
+}
+
+function startSession() {
+  activePool = buildPool(getSelectedLessonIds());
+  currentCard = null;
+  minute = 1; goals = 0; misses = 0;
+  lessonScreen.style.display = "none";
+  gameEls.forEach(el => el.style.display = "");
+  updateScoreboard();
+  loadCard();
+}
+
+document.querySelectorAll(".lesson-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (btn.dataset.lesson === "all") {
+      const allActive = [...document.querySelectorAll(".lesson-btn")].every(b => b.classList.contains("active"));
+      document.querySelectorAll(".lesson-btn").forEach(b => b.classList.toggle("active", !allActive));
+    } else {
+      btn.classList.toggle("active");
+      const individual = [...document.querySelectorAll(".lesson-btn[data-lesson]:not([data-lesson='all'])")];
+      document.querySelector("[data-lesson='all']").classList.toggle("active", individual.every(b => b.classList.contains("active")));
+    }
+  });
+});
+
+document.getElementById("start-btn").addEventListener("click", startSession);
+document.getElementById("change-lesson-btn").addEventListener("click", showLessonScreen);
+
+showLessonScreen();
+
+// --- Kortlogik ---
+
 function weightedRandomCard() {
-  const candidates = vocab.length > 1 ? vocab.filter(v => v !== currentCard) : vocab;
+  const candidates = activePool.length > 1 ? activePool.filter(v => v !== currentCard) : activePool;
   const weights = candidates.map(v => 1 / (v.strength + 1));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
@@ -62,6 +122,7 @@ function loadCard() {
   if (minute > 90) {
     front.textContent = "⏱️ Slutresultat";
     back.textContent = `${goals}–${misses}`;
+    setTimeout(showLessonScreen, 3000);
     return;
   }
 
@@ -80,7 +141,8 @@ function loadCard() {
   updateScoreboard();
 }
 
-// Fix 1: Spåra om en swipe skett för att förhindra att click-flip triggar samtidigt
+// --- Swipe-hantering ---
+
 let startX = 0;
 let didSwipe = false;
 
@@ -113,10 +175,8 @@ card.addEventListener("pointerup", e => {
   }
 });
 
-// Fix 3: Registrera service worker för PWA
+// --- PWA ---
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
-
-updateScoreboard();
-loadCard();
