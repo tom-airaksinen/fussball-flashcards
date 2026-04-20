@@ -39,6 +39,78 @@ function updateScoreboard() {
 function goal() { goals++; }
 function miss() { misses++; }
 
+// --- Swipe-feedback ---
+
+const feedbackEl = document.getElementById("swipe-feedback");
+
+function showFeedback(correct) {
+  feedbackEl.textContent = correct ? "✓" : "✗";
+  feedbackEl.style.color = correct ? "#5a9a5a" : "#c0392b";
+  feedbackEl.classList.remove("show");
+  void feedbackEl.offsetWidth; // force reflow för att animationen ska starta om
+  feedbackEl.classList.add("show");
+}
+
+// --- Ångra-funktion (skaka) ---
+
+let undoState = null;
+
+function saveUndoState() {
+  undoState = {
+    card: currentCard,
+    strength: currentCard.strength,
+    goals,
+    misses,
+    minute: minute - 1,
+    showSwedish,
+  };
+}
+
+function undoLastSwipe() {
+  if (!undoState) return;
+  undoState.card.strength = undoState.strength;
+  goals = undoState.goals;
+  misses = undoState.misses;
+  minute = undoState.minute;
+  currentCard = undoState.card;
+  showSwedish = undoState.showSwedish;
+  undoState = null;
+  saveProgress();
+  card.classList.remove("flipped");
+  front.textContent = showSwedish ? currentCard.sv : currentCard.de;
+  back.textContent = showSwedish ? currentCard.de : currentCard.sv;
+  updateScoreboard();
+}
+
+let lastShakeTime = 0;
+
+function setupShake() {
+  window.addEventListener("devicemotion", e => {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const magnitude = Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2);
+    const now = Date.now();
+    if (magnitude > 25 && now - lastShakeTime > 1000) {
+      lastShakeTime = now;
+      undoLastSwipe();
+    }
+  });
+}
+
+async function requestMotionPermission() {
+  if (typeof DeviceMotionEvent !== "undefined" &&
+      typeof DeviceMotionEvent.requestPermission === "function") {
+    try {
+      const result = await DeviceMotionEvent.requestPermission();
+      if (result === "granted") setupShake();
+    } catch (e) {
+      // Användaren nekade eller fel – shake fungerar inte men appen fortsätter
+    }
+  } else {
+    setupShake(); // Android och övriga – inget permission-krav
+  }
+}
+
 // --- Lektionssystem ---
 
 const lessons = [
@@ -89,12 +161,14 @@ function showLessonScreen() {
 function startSession() {
   activePool = buildPool(getSelectedLessonIds());
   currentCard = null;
+  undoState = null;
   minute = 1; goals = 0; misses = 0;
   lessonScreen.style.display = "none";
   wordListScreen.style.display = "none";
   gameEls.forEach(el => el.style.display = "");
   updateScoreboard();
   loadCard();
+  requestMotionPermission();
 }
 
 function syncAllRow() {
@@ -200,15 +274,19 @@ card.addEventListener("pointerup", e => {
 
   if (dx > 50) {
     didSwipe = true;
+    saveUndoState();
     currentCard.strength = Math.min(currentCard.strength + 1, 5);
     saveProgress();
     goal();
+    showFeedback(true);
     loadCard();
   } else if (dx < -50) {
     didSwipe = true;
+    saveUndoState();
     currentCard.strength = Math.max(0, currentCard.strength - 1);
     saveProgress();
     miss();
+    showFeedback(false);
     loadCard();
   }
 });
