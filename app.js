@@ -10,16 +10,19 @@ const STORAGE_KEY = "fussball-progress";
 
 let progress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
+// Separata strength-index per riktning
 vocab.forEach(v => {
   if (!progress[v.id]) {
-    progress[v.id] = { strength: 0 };
+    progress[v.id] = { strength_sv: 0, strength_de: 0 };
   }
-  v.strength = progress[v.id].strength;
+  v.strength_sv = progress[v.id].strength_sv ?? 0;
+  v.strength_de = progress[v.id].strength_de ?? 0;
 });
 
 function saveProgress() {
   vocab.forEach(v => {
-    progress[v.id].strength = v.strength;
+    progress[v.id].strength_sv = v.strength_sv;
+    progress[v.id].strength_de = v.strength_de;
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
@@ -47,7 +50,7 @@ function showFeedback(type) {
   feedbackEl.textContent = type === "undo" ? "↩️" : type === true ? "✓" : "✗";
   feedbackEl.style.color = type === "undo" ? "white" : type === true ? "#5a9a5a" : "#c0392b";
   feedbackEl.classList.remove("show");
-  void feedbackEl.offsetWidth; // force reflow för att animationen ska starta om
+  void feedbackEl.offsetWidth;
   feedbackEl.classList.add("show");
 }
 
@@ -58,7 +61,8 @@ let undoState = null;
 function saveUndoState() {
   undoState = {
     card: currentCard,
-    strength: currentCard.strength,
+    strength_sv: currentCard.strength_sv,
+    strength_de: currentCard.strength_de,
     goals,
     misses,
     minute: minute - 1,
@@ -68,7 +72,8 @@ function saveUndoState() {
 
 function undoLastSwipe() {
   if (!undoState) return;
-  undoState.card.strength = undoState.strength;
+  undoState.card.strength_sv = undoState.strength_sv;
+  undoState.card.strength_de = undoState.strength_de;
   goals = undoState.goals;
   misses = undoState.misses;
   minute = undoState.minute;
@@ -105,10 +110,10 @@ async function requestMotionPermission() {
       const result = await DeviceMotionEvent.requestPermission();
       if (result === "granted") setupShake();
     } catch (e) {
-      // Användaren nekade eller fel – shake fungerar inte men appen fortsätter
+      // Användaren nekade – shake fungerar inte men appen fortsätter
     }
   } else {
-    setupShake(); // Android och övriga – inget permission-krav
+    setupShake();
   }
 }
 
@@ -121,12 +126,10 @@ const lessons = [
   { id: 4, name: "4 – Match & resultat",     cards: [3, 26, 27, 28, 32, 33, 34, 35, 36, 38, 39] },
 ];
 
-// Uppdatera ordantalet i lektionsraderna
 lessons.forEach(lesson => {
   const row = document.querySelector(`.lesson-row[data-lesson="${lesson.id}"]`);
   if (row) {
-    const label = row.querySelector(".lesson-label");
-    label.textContent = `${lesson.name} (${lesson.cards.length})`;
+    row.querySelector(".lesson-label").textContent = `${lesson.name} (${lesson.cards.length})`;
   }
 });
 
@@ -177,10 +180,9 @@ function syncAllRow() {
   document.querySelector(".lesson-row[data-lesson='all']").classList.toggle("active", individual.every(r => r.classList.contains("active")));
 }
 
-// Toggle-logik: klick på check-rutan eller raden (ej view-knappen)
 document.querySelectorAll(".lesson-row").forEach(row => {
   row.addEventListener("click", e => {
-    if (e.target.classList.contains("lesson-view")) return; // hanteras separat
+    if (e.target.classList.contains("lesson-view")) return;
     const lessonId = row.dataset.lesson;
     if (lessonId === "all") {
       const allActive = [...document.querySelectorAll(".lesson-row")].every(r => r.classList.contains("active"));
@@ -192,7 +194,6 @@ document.querySelectorAll(".lesson-row").forEach(row => {
   });
 });
 
-// Ordlistevy
 document.querySelectorAll(".lesson-view").forEach(btn => {
   btn.addEventListener("click", e => {
     e.stopPropagation();
@@ -218,9 +219,10 @@ showLessonScreen();
 
 // --- Kortlogik ---
 
-function weightedRandomCard() {
+// Riktning bestäms före korturval så att vikten baseras på rätt index
+function weightedRandomCard(showSv) {
   const candidates = activePool.length > 1 ? activePool.filter(v => v !== currentCard) : activePool;
-  const weights = candidates.map(v => 1 / (v.strength + 1));
+  const weights = candidates.map(v => 1 / ((showSv ? v.strength_sv : v.strength_de) + 1));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
 
@@ -240,12 +242,11 @@ function loadCard() {
   }
 
   card.classList.remove("flipped");
-  currentCard = weightedRandomCard();
 
   const mode = modeSelect.value;
-  showSwedish =
-    mode === "sv-de" ||
-    (mode === "mixed" && Math.random() < 0.5);
+  showSwedish = mode === "sv-de" || (mode === "mixed" && Math.random() < 0.5);
+
+  currentCard = weightedRandomCard(showSwedish);
 
   front.textContent = showSwedish ? currentCard.sv : currentCard.de;
   back.textContent = showSwedish ? currentCard.de : currentCard.sv;
@@ -276,7 +277,8 @@ card.addEventListener("pointerup", e => {
   if (dx > 50) {
     didSwipe = true;
     saveUndoState();
-    currentCard.strength = Math.min(currentCard.strength + 1, 5);
+    if (showSwedish) currentCard.strength_sv = Math.min(currentCard.strength_sv + 1, 5);
+    else             currentCard.strength_de = Math.min(currentCard.strength_de + 1, 5);
     saveProgress();
     goal();
     showFeedback(true);
@@ -284,7 +286,8 @@ card.addEventListener("pointerup", e => {
   } else if (dx < -50) {
     didSwipe = true;
     saveUndoState();
-    currentCard.strength = Math.max(0, currentCard.strength - 1);
+    if (showSwedish) currentCard.strength_sv = Math.max(0, currentCard.strength_sv - 1);
+    else             currentCard.strength_de = Math.max(0, currentCard.strength_de - 1);
     saveProgress();
     miss();
     showFeedback(false);
