@@ -30,6 +30,8 @@ function saveProgress() {
 let currentCard = null;
 let showSwedish = true;
 let isAnimating = false;
+let isSingleLesson = false;
+let knownInSession = new Set();
 
 let minute = 1;
 let goals = 0;
@@ -88,6 +90,7 @@ function undoLastSwipe() {
     minute      = undoState.minute;
     currentCard = undoState.card;
     showSwedish = undoState.showSwedish;
+    knownInSession.delete(undoState.card.id);
     undoState   = null;
 
     saveProgress();
@@ -175,11 +178,20 @@ const gameEls = [
 function showLessonScreen() {
   lessonScreen.style.display = "flex";
   wordListScreen.style.display = "none";
+  document.getElementById("congrats-screen").style.display = "none";
   gameEls.forEach(el => el.style.display = "none");
 }
 
+function showCongratsScreen() {
+  gameEls.forEach(el => el.style.display = "none");
+  document.getElementById("congrats-screen").style.display = "flex";
+}
+
 function startSession() {
-  activePool = buildPool(getSelectedLessonIds());
+  const selectedIds = getSelectedLessonIds();
+  activePool = buildPool(selectedIds);
+  isSingleLesson = selectedIds.length === 1;
+  knownInSession = new Set();
   currentCard = null;
   undoState = null;
   isAnimating = false;
@@ -231,6 +243,7 @@ document.querySelectorAll(".lesson-view").forEach(btn => {
 document.getElementById("word-list-back").addEventListener("click", showLessonScreen);
 document.getElementById("start-btn").addEventListener("click", startSession);
 document.getElementById("back-btn").addEventListener("click", showLessonScreen);
+document.getElementById("congrats-done-btn").addEventListener("click", showLessonScreen);
 
 showLessonScreen();
 
@@ -250,10 +263,18 @@ function weightedRandomCard(showSv) {
 }
 
 function loadCard() {
-  if (minute > 90) {
-    front.textContent = "⏱️ Slutresultat";
-    back.textContent = `${goals}–${misses}`;
-    setTimeout(showLessonScreen, 3000);
+  const sessionDone = isSingleLesson
+    ? activePool.every(v => knownInSession.has(v.id))
+    : minute > 90;
+
+  if (sessionDone) {
+    if (isSingleLesson) {
+      showCongratsScreen();
+    } else {
+      front.textContent = "⏱️ Slutresultat";
+      back.textContent = `${goals}–${misses}`;
+      setTimeout(showLessonScreen, 3000);
+    }
     return;
   }
 
@@ -313,6 +334,7 @@ card.addEventListener("pointerup", e => {
     if (showSwedish) currentCard.strength_sv = Math.min(currentCard.strength_sv + 1, 5);
     else             currentCard.strength_de = Math.min(currentCard.strength_de + 1, 5);
     saveProgress();
+    knownInSession.add(currentCard.id);
     goal();
     showFeedback(true);
     performSwipe("right");

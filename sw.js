@@ -1,4 +1,4 @@
-const CACHE = "fussball-v9";
+const CACHE = "fussball-v10";
 const ASSETS = [
   ".",
   "index.html",
