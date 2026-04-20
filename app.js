@@ -92,19 +92,19 @@ card.addEventListener("click", () => {
 card.addEventListener("pointerdown", e => {
   startX = e.clientX;
   didSwipe = false;
+  card.setPointerCapture(e.pointerId);
 });
 
 card.addEventListener("pointerup", e => {
   const dx = e.clientX - startX;
 
-  if (dx > 80) {
+  if (dx > 50) {
     didSwipe = true;
-    // Fix 4: Tak på strength vid 5
     currentCard.strength = Math.min(currentCard.strength + 1, 5);
     saveProgress();
     goal();
     loadCard();
-  } else if (dx < -80) {
+  } else if (dx < -50) {
     didSwipe = true;
     currentCard.strength = Math.max(0, currentCard.strength - 1);
     saveProgress();
