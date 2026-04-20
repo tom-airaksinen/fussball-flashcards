@@ -310,7 +310,24 @@ function performSwipe(direction) {
 // --- Swipe-hantering ---
 
 let startX = 0;
+let isDragging = false;
 let didSwipe = false;
+
+const SWIPE_THRESHOLD = 80;
+const ROTATION_FACTOR = 0.06; // grader per px
+
+function setCardDrag(dx) {
+  const deg = dx * ROTATION_FACTOR;
+  card.style.transform = `translateX(${dx}px) rotate(${deg}deg)`;
+}
+
+function snapBack() {
+  card.classList.add("snapping");
+  card.style.transform = "";
+  card.addEventListener("transitionend", () => {
+    card.classList.remove("snapping");
+  }, { once: true });
+}
 
 card.addEventListener("click", () => {
   if (didSwipe || isAnimating) return;
@@ -320,16 +337,25 @@ card.addEventListener("click", () => {
 card.addEventListener("pointerdown", e => {
   if (isAnimating) return;
   startX = e.clientX;
+  isDragging = true;
   didSwipe = false;
   card.setPointerCapture(e.pointerId);
 });
 
+card.addEventListener("pointermove", e => {
+  if (!isDragging || isAnimating) return;
+  const dx = e.clientX - startX;
+  setCardDrag(dx);
+});
+
 card.addEventListener("pointerup", e => {
-  if (isAnimating) return;
+  if (!isDragging || isAnimating) return;
+  isDragging = false;
   const dx = e.clientX - startX;
 
-  if (dx > 50) {
+  if (dx > SWIPE_THRESHOLD) {
     didSwipe = true;
+    card.style.transform = "";
     saveUndoState();
     if (showSwedish) currentCard.strength_sv = Math.min(currentCard.strength_sv + 1, 5);
     else             currentCard.strength_de = Math.min(currentCard.strength_de + 1, 5);
@@ -338,8 +364,9 @@ card.addEventListener("pointerup", e => {
     goal();
     showFeedback(true);
     performSwipe("right");
-  } else if (dx < -50) {
+  } else if (dx < -SWIPE_THRESHOLD) {
     didSwipe = true;
+    card.style.transform = "";
     saveUndoState();
     if (showSwedish) currentCard.strength_sv = Math.max(0, currentCard.strength_sv - 1);
     else             currentCard.strength_de = Math.max(0, currentCard.strength_de - 1);
@@ -347,7 +374,15 @@ card.addEventListener("pointerup", e => {
     miss();
     showFeedback(false);
     performSwipe("left");
+  } else {
+    snapBack();
   }
+});
+
+card.addEventListener("pointercancel", () => {
+  if (!isDragging) return;
+  isDragging = false;
+  snapBack();
 });
 
 // --- PWA ---
