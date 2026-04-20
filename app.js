@@ -82,6 +82,9 @@ function undoLastSwipe() {
   undoState = null;
   saveProgress();
   card.classList.remove("flipped");
+  card.classList.remove("undo-slide");
+  void card.offsetWidth;
+  card.classList.add("undo-slide");
   front.textContent = showSwedish ? currentCard.sv : currentCard.de;
   back.textContent = showSwedish ? currentCard.de : currentCard.sv;
   updateScoreboard();
@@ -150,7 +153,7 @@ function buildPool(selectedLessonIds) {
 const lessonScreen = document.getElementById("lesson-screen");
 const wordListScreen = document.getElementById("word-list-screen");
 const gameEls = [
-  document.querySelector("header"),
+  document.getElementById("game-bar"),
   document.getElementById("scoreboard"),
   document.querySelector("main"),
   document.querySelector("footer"),
@@ -213,7 +216,7 @@ document.querySelectorAll(".lesson-view").forEach(btn => {
 
 document.getElementById("word-list-back").addEventListener("click", showLessonScreen);
 document.getElementById("start-btn").addEventListener("click", startSession);
-document.getElementById("change-lesson-btn").addEventListener("click", showLessonScreen);
+document.getElementById("back-btn").addEventListener("click", showLessonScreen);
 
 showLessonScreen();
 
