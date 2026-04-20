@@ -43,9 +43,9 @@ function miss() { misses++; }
 
 const feedbackEl = document.getElementById("swipe-feedback");
 
-function showFeedback(correct) {
-  feedbackEl.textContent = correct ? "✓" : "✗";
-  feedbackEl.style.color = correct ? "#5a9a5a" : "#c0392b";
+function showFeedback(type) {
+  feedbackEl.textContent = type === "undo" ? "↩️" : type === true ? "✓" : "✗";
+  feedbackEl.style.color = type === "undo" ? "white" : type === true ? "#5a9a5a" : "#c0392b";
   feedbackEl.classList.remove("show");
   void feedbackEl.offsetWidth; // force reflow för att animationen ska starta om
   feedbackEl.classList.add("show");
@@ -80,6 +80,7 @@ function undoLastSwipe() {
   front.textContent = showSwedish ? currentCard.sv : currentCard.de;
   back.textContent = showSwedish ? currentCard.de : currentCard.sv;
   updateScoreboard();
+  showFeedback("undo");
 }
 
 let lastShakeTime = 0;
