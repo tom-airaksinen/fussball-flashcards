@@ -39,6 +39,6 @@ const vocab = [
   { id: 38, sv: "Stolpe",           de: "der Pfosten" },
   { id: 39, sv: "Ribba",            de: "die Latte" },
   { id: 40, sv: "Dribbling",        de: "das Dribbling" },
-  { id: 41, sv: "Konter",           de: "der Konter" },
+  { id: 41, sv: "Kontring",          de: "der Gegenangriff" },
   { id: 42, sv: "Assist",           de: "die Vorlage" },
 ];
