@@ -29,6 +29,7 @@ function saveProgress() {
 
 let currentCard = null;
 let showSwedish = true;
+let isAnimating = false;
 
 let minute = 1;
 let goals = 0;
@@ -71,24 +72,36 @@ function saveUndoState() {
 }
 
 function undoLastSwipe() {
-  if (!undoState) return;
-  undoState.card.strength_sv = undoState.strength_sv;
-  undoState.card.strength_de = undoState.strength_de;
-  goals = undoState.goals;
-  misses = undoState.misses;
-  minute = undoState.minute;
-  currentCard = undoState.card;
-  showSwedish = undoState.showSwedish;
-  undoState = null;
-  saveProgress();
-  card.classList.remove("flipped");
-  card.classList.remove("undo-slide");
-  void card.offsetWidth;
-  card.classList.add("undo-slide");
-  front.textContent = showSwedish ? currentCard.sv : currentCard.de;
-  back.textContent = showSwedish ? currentCard.de : currentCard.sv;
-  updateScoreboard();
-  showFeedback("undo");
+  if (!undoState || isAnimating) return;
+  isAnimating = true;
+
+  card.classList.add("undo-out");
+
+  setTimeout(() => {
+    card.classList.remove("undo-out", "flipped");
+
+    // Återställ state
+    undoState.card.strength_sv = undoState.strength_sv;
+    undoState.card.strength_de = undoState.strength_de;
+    goals       = undoState.goals;
+    misses      = undoState.misses;
+    minute      = undoState.minute;
+    currentCard = undoState.card;
+    showSwedish = undoState.showSwedish;
+    undoState   = null;
+
+    saveProgress();
+    front.textContent = showSwedish ? currentCard.sv : currentCard.de;
+    back.textContent  = showSwedish ? currentCard.de : currentCard.sv;
+    updateScoreboard();
+    showFeedback("undo");
+
+    card.classList.add("undo-in");
+    setTimeout(() => {
+      card.classList.remove("undo-in");
+      isAnimating = false;
+    }, 300);
+  }, 200);
 }
 
 let lastShakeTime = 0;
@@ -169,6 +182,7 @@ function startSession() {
   activePool = buildPool(getSelectedLessonIds());
   currentCard = null;
   undoState = null;
+  isAnimating = false;
   minute = 1; goals = 0; misses = 0;
   lessonScreen.style.display = "none";
   wordListScreen.style.display = "none";
@@ -222,7 +236,6 @@ showLessonScreen();
 
 // --- Kortlogik ---
 
-// Riktning bestäms före korturval så att vikten baseras på rätt index
 function weightedRandomCard(showSv) {
   const candidates = activePool.length > 1 ? activePool.filter(v => v !== currentCard) : activePool;
   const weights = candidates.map(v => 1 / ((showSv ? v.strength_sv : v.strength_de) + 1));
@@ -248,14 +261,29 @@ function loadCard() {
 
   const mode = modeSelect.value;
   showSwedish = mode === "sv-de" || (mode === "mixed" && Math.random() < 0.5);
-
   currentCard = weightedRandomCard(showSwedish);
 
   front.textContent = showSwedish ? currentCard.sv : currentCard.de;
-  back.textContent = showSwedish ? currentCard.de : currentCard.sv;
+  back.textContent  = showSwedish ? currentCard.de : currentCard.sv;
 
   minute++;
   updateScoreboard();
+}
+
+// Flyga ut kortet, ladda nästa och animera in det
+function performSwipe(direction) {
+  isAnimating = true;
+  card.classList.add(direction === "right" ? "fly-out-right" : "fly-out-left");
+
+  setTimeout(() => {
+    card.classList.remove("fly-out-right", "fly-out-left");
+    loadCard();
+    card.classList.add("card-emerge");
+    setTimeout(() => {
+      card.classList.remove("card-emerge");
+      isAnimating = false;
+    }, 300);
+  }, 230);
 }
 
 // --- Swipe-hantering ---
@@ -264,17 +292,19 @@ let startX = 0;
 let didSwipe = false;
 
 card.addEventListener("click", () => {
-  if (didSwipe) return;
+  if (didSwipe || isAnimating) return;
   card.classList.toggle("flipped");
 });
 
 card.addEventListener("pointerdown", e => {
+  if (isAnimating) return;
   startX = e.clientX;
   didSwipe = false;
   card.setPointerCapture(e.pointerId);
 });
 
 card.addEventListener("pointerup", e => {
+  if (isAnimating) return;
   const dx = e.clientX - startX;
 
   if (dx > 50) {
@@ -285,7 +315,7 @@ card.addEventListener("pointerup", e => {
     saveProgress();
     goal();
     showFeedback(true);
-    loadCard();
+    performSwipe("right");
   } else if (dx < -50) {
     didSwipe = true;
     saveUndoState();
@@ -294,7 +324,7 @@ card.addEventListener("pointerup", e => {
     saveProgress();
     miss();
     showFeedback(false);
-    loadCard();
+    performSwipe("left");
   }
 });
 
