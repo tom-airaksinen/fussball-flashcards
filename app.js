@@ -269,6 +269,7 @@ function loadCard() {
 
   if (sessionDone) {
     if (isSingleLesson) {
+      isAnimating = false;
       showCongratsScreen();
     } else {
       front.textContent = "⏱️ Slutresultat";

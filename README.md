@@ -1,38 +1,44 @@
-# Flashcards – Glosträning
+# ⚽ Fußball Flashcards
 
-## Idé
+Mobilwebbapp (PWA) för att träna tyska fotbollsglosor via swipe-interaktion. Byggd med ren HTML/CSS/JS och driftsatt på GitHub Pages.
 
-En enkel mobilwebbapp för att träna glosor med flashcards. Användaren bläddrar igenom kort, försöker minnas svaret och markerar om det gick bra eller dåligt.
+**Live:** https://tom-airaksinen.github.io/fussball-flashcards/
 
-## Mål
+## Funktioner
 
-- Fungera bra på mobil (touch-vänligt, responsiv design)
-- Enkel och snabb att använda – inga inloggningar eller konton
-- Stöd för egna kortlekar
-- Spara progress lokalt (localStorage)
+- **42 glosor** uppdelade i 4 lektioner
+- **Swipe höger** = kan ordet, **swipe vänster** = kan inte
+- Kortet följer fingret live med rotation – fysisk dragkänsla med snap-back
+- **Tryck på kortet** = flippa och se svaret
+- **Skaka telefonen** = ångra senaste svep (↩️)
+- **Spaced repetition** per riktning: separata index för sv→de och de→sv
+- **Progress sparas** lokalt (localStorage), ingen inloggning krävs
 
-## Teknisk stack (föreslagen)
+## Lektionssystem
 
-- Ren HTML/CSS/JS – inga ramverk, enkel att deploya
-- eller React/Vite om mer komplexitet behövs
-- Lagring: localStorage (inga servrar behövs)
+Välj en eller flera lektioner att öva på startskärmen:
 
-## Funktioner att bygga
+| # | Lektion | Ord |
+|---|---------|-----|
+| 1 | Grundläggande | 11 |
+| 2 | Regler & situationer | 12 |
+| 3 | Spelet | 8 |
+| 4 | Match & resultat | 11 |
 
-- [ ] Visa framsida av kort (fråga/glosa)
-- [ ] Vänd kortet för att se baksida (svar/översättning)
-- [ ] Markera: "Kunde det" / "Kunde det inte"
-- [ ] Bläddra igenom en kortlek
-- [ ] Lägg till egna kortlekar (JSON-import eller manuellt)
-- [ ] Spaced repetition (enkel variant)?
+- Tryck **›** på en lektion för att se alla ord innan du börjar
+- **Singel-lektion**: sessionen är klar när du svept höger på alla ord → 🎉 grattis-skärm
+- **Flera lektioner**: matchformat med 90 kort
 
-## Status
+## Teknisk stack
 
-**Idéfas – inget byggt ännu.**
+- Ren HTML/CSS/JS – inga ramverk eller byggsteg
+- PWA: installerbar på hemskärmen, fungerar offline (service worker)
+- GitHub Pages för hosting
 
-## Nästa steg
+## Publicera uppdateringar
 
-1. Bestäm teknisk stack
-2. Designa UI-flödet (hur ser ett session-genomgång ut?)
-3. Bygg MVP: en hårdkodad kortlek man kan bläddra igenom
-4. Lägg till möjlighet att importera egna lekar
+```
+git add -A && git commit -m "..." && git push
+```
+
+GitHub Pages uppdateras automatiskt. PWA-användare får ny version vid nästa appstart.
