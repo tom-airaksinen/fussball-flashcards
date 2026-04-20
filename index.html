@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fußball Flashcards</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1e1e1e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>⚽ Fußball</h1>
+    <select id="mode">
+      <option value="sv-de">Svenska → Tyska</option>
+      <option value="de-sv">Tyska → Svenska</option>
+      <option value="mixed">Blandat</option>
+    </select>
+  </header>
+
+  <div id="scoreboard">
+    ⏱️ <span id="minute">1</span>'  
+    ⚽ <span id="score">0–0</span>
+  </div>
+
+  <main>
+    <div id="card" class="card">
+      <div class="card-inner">
+        <div class="card-front" id="front"></div>
+        <div class="card-back" id="back"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>👈 kan inte &nbsp;&nbsp; 👉 kan</p>
+  </footer>
+
+  <script src="data/vocab.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
