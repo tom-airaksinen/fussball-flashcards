@@ -23,6 +23,7 @@ function saveProgress() {
   vocab.forEach(v => {
     progress[v.id].strength_sv = v.strength_sv;
     progress[v.id].strength_de = v.strength_de;
+    // snoozedUntil lives directly on progress[id], no sync needed here
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
@@ -50,8 +51,8 @@ function miss() { misses++; }
 const feedbackEl = document.getElementById("swipe-feedback");
 
 function showFeedback(type) {
-  feedbackEl.textContent = type === "undo" ? "↩️" : type === true ? "✓" : "✗";
-  feedbackEl.style.color = type === "undo" ? "white" : type === true ? "#5a9a5a" : "#c0392b";
+  feedbackEl.textContent = type === "undo" ? "↩️" : type === "snooze" ? "✅✅" : type === true ? "✓" : "✗";
+  feedbackEl.style.color = type === "undo" ? "white" : type === "snooze" ? "#5a9a5a" : type === true ? "#5a9a5a" : "#c0392b";
   feedbackEl.classList.remove("show");
   void feedbackEl.offsetWidth;
   feedbackEl.classList.add("show");
@@ -61,11 +62,36 @@ function showFeedback(type) {
 
 let undoState = null;
 
+function nextSwedishMidnight() {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  const parts = formatter.formatToParts(now);
+  const y = Number(parts.find(p => p.type === "year").value);
+  const m = Number(parts.find(p => p.type === "month").value);
+  const d = Number(parts.find(p => p.type === "day").value);
+  // Midnight at start of next day in Stockholm
+  const midnight = new Date(`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}T00:00:00`);
+  midnight.setDate(midnight.getDate() + 1);
+  // Adjust for Stockholm offset by computing UTC equivalent
+  const stockholmOffset = getStockholmOffsetMinutes(midnight);
+  return midnight.getTime() - stockholmOffset * 60000;
+}
+
+function getStockholmOffsetMinutes(date) {
+  const utcStr = new Date(date).toLocaleString("en-US", { timeZone: "UTC" });
+  const stStr  = new Date(date).toLocaleString("en-US", { timeZone: "Europe/Stockholm" });
+  return (new Date(stStr) - new Date(utcStr)) / 60000;
+}
+
 function saveUndoState() {
   undoState = {
     card: currentCard,
     strength_sv: currentCard.strength_sv,
     strength_de: currentCard.strength_de,
+    snoozedUntil: progress[currentCard.id].snoozedUntil ?? null,
     goals,
     misses,
     minute: minute - 1,
@@ -85,6 +111,11 @@ function undoLastSwipe() {
     // Återställ state
     undoState.card.strength_sv = undoState.strength_sv;
     undoState.card.strength_de = undoState.strength_de;
+    if (undoState.snoozedUntil === null) {
+      delete progress[undoState.card.id].snoozedUntil;
+    } else {
+      progress[undoState.card.id].snoozedUntil = undoState.snoozedUntil;
+    }
     goals       = undoState.goals;
     misses      = undoState.misses;
     minute      = undoState.minute;
@@ -249,8 +280,15 @@ showLessonScreen();
 
 // --- Kortlogik ---
 
+function isSnoozed(v) {
+  const until = progress[v.id]?.snoozedUntil;
+  return until && Date.now() < until;
+}
+
 function weightedRandomCard(showSv) {
-  const candidates = activePool.length > 1 ? activePool.filter(v => v !== currentCard) : activePool;
+  const base = activePool.filter(v => !isSnoozed(v));
+  const pool = base.length > 0 ? base : activePool; // fallback: all cards if all snoozed
+  const candidates = pool.length > 1 ? pool.filter(v => v !== currentCard) : pool;
   const weights = candidates.map(v => 1 / ((showSv ? v.strength_sv : v.strength_de) + 1));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
@@ -264,7 +302,7 @@ function weightedRandomCard(showSv) {
 
 function loadCard() {
   const sessionDone = isSingleLesson
-    ? activePool.every(v => knownInSession.has(v.id))
+    ? activePool.every(v => knownInSession.has(v.id) || isSnoozed(v))
     : minute > 90;
 
   if (sessionDone) {
@@ -295,10 +333,11 @@ function loadCard() {
 // Flyga ut kortet, ladda nästa och animera in det
 function performSwipe(direction) {
   isAnimating = true;
-  card.classList.add(direction === "right" ? "fly-out-right" : "fly-out-left");
+  const cls = direction === "right" ? "fly-out-right" : direction === "up" ? "fly-out-up" : "fly-out-left";
+  card.classList.add(cls);
 
   setTimeout(() => {
-    card.classList.remove("fly-out-right", "fly-out-left");
+    card.classList.remove("fly-out-right", "fly-out-left", "fly-out-up");
     loadCard();
     card.classList.add("card-emerge");
     setTimeout(() => {
@@ -311,15 +350,17 @@ function performSwipe(direction) {
 // --- Swipe-hantering ---
 
 let startX = 0;
+let startY = 0;
 let isDragging = false;
 let didSwipe = false;
 
 const SWIPE_THRESHOLD = 80;
 const ROTATION_FACTOR = 0.06; // grader per px
 
-function setCardDrag(dx) {
+function setCardDrag(dx, dy) {
   const deg = dx * ROTATION_FACTOR;
-  card.style.transform = `translateX(${dx}px) rotate(${deg}deg)`;
+  const ty = Math.min(0, dy); // only allow upward movement
+  card.style.transform = `translateX(${dx}px) translateY(${ty}px) rotate(${deg}deg)`;
 }
 
 function snapBack() {
@@ -338,6 +379,7 @@ card.addEventListener("click", () => {
 card.addEventListener("pointerdown", e => {
   if (isAnimating) return;
   startX = e.clientX;
+  startY = e.clientY;
   isDragging = true;
   didSwipe = false;
   card.setPointerCapture(e.pointerId);
@@ -346,15 +388,29 @@ card.addEventListener("pointerdown", e => {
 card.addEventListener("pointermove", e => {
   if (!isDragging || isAnimating) return;
   const dx = e.clientX - startX;
-  setCardDrag(dx);
+  const dy = e.clientY - startY;
+  setCardDrag(dx, dy);
 });
 
 card.addEventListener("pointerup", e => {
   if (!isDragging || isAnimating) return;
   isDragging = false;
   const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
 
-  if (dx > SWIPE_THRESHOLD) {
+  if (absDy > SWIPE_THRESHOLD && absDy > absDx && dy < 0) {
+    // Upward swipe → snooze
+    didSwipe = true;
+    card.style.transform = "";
+    saveUndoState();
+    progress[currentCard.id].snoozedUntil = nextSwedishMidnight();
+    saveProgress();
+    knownInSession.add(currentCard.id);
+    showFeedback("snooze");
+    performSwipe("up");
+  } else if (dx > SWIPE_THRESHOLD) {
     didSwipe = true;
     card.style.transform = "";
     saveUndoState();

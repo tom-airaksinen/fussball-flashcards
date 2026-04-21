@@ -141,6 +141,10 @@ footer {
   from { transform: translateX(0) rotate(0deg);     opacity: 1; }
   to   { transform: translateX(-140%) rotate(-8deg); opacity: 0; }
 }
+@keyframes fly-out-up {
+  from { transform: translateY(0)    scale(1);    opacity: 1; }
+  to   { transform: translateY(-130%) scale(0.9); opacity: 0; }
+}
 @keyframes card-emerge {
   from { transform: scale(0.88) translateY(8px); opacity: 0.3; }
   to   { transform: scale(1)    translateY(0);   opacity: 1; }
@@ -156,6 +160,7 @@ footer {
 
 .card.fly-out-right  { animation: fly-out-right 0.22s ease forwards; }
 .card.fly-out-left   { animation: fly-out-left  0.22s ease forwards; }
+.card.fly-out-up     { animation: fly-out-up    0.22s ease forwards; }
 .card.card-emerge    { animation: card-emerge   0.28s ease forwards; }
 .card.undo-out       { animation: undo-out      0.18s ease forwards; }
 .card.undo-in        { animation: undo-in       0.28s ease forwards; }
